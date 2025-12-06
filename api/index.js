@@ -2,141 +2,141 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const { Pool } = require('pg'); // Уберите эту строку если не используете pg
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Простой лог
-console.log('🚀 SiaMatch Backend starting...');
+// Диагностика
+console.log('🚀 SiaMatch Backend starting with Node.js', process.version);
 
-// 1. КОРЕНЬ
+// ============ ВАРИАНТ 1: С БАЗОЙ ДАННЫХ ============
+// Раскомментируйте если хотите использовать базу
+
+/*
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+// Проверка подключения к базе
+pool.query('SELECT NOW()')
+  .then(() => console.log('✅ Database connected'))
+  .catch(err => console.log('⚠️ Database error:', err.message));
+*/
+
+// ============ ВАРИАНТ 2: БЕЗ БАЗЫ (проще) ============
+const useDatabase = false; // поменяйте на true если подключили базу
+
+// КОРЕНЬ
 app.get('/', (req, res) => {
   res.json({
     service: 'SiaMatch Backend API',
     status: 'running ✅',
-    version: '1.0.1',
+    version: '2.0.0',
+    nodeVersion: process.version,
     timestamp: new Date().toISOString(),
-    message: 'Сервер работает! База данных временно отключена',
-    endpoints: [
-      'GET /',
-      'GET /api/health',
-      'POST /api/register',
-      'GET /api/users/:city',
-      'POST /api/swipe'
-    ]
+    database: useDatabase ? 'connected' : 'test mode',
+    endpoints: {
+      root: 'GET /',
+      health: 'GET /api/health',
+      register: 'POST /api/register',
+      users: 'GET /api/users/:city',
+      swipe: 'POST /api/swipe'
+    }
   });
 });
 
-// 2. HEALTH CHECK (без базы)
+// HEALTH CHECK
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
     service: 'SiaMatch Backend',
+    nodeVersion: process.version,
     timestamp: new Date().toISOString(),
-    database: {
-      connected: false,
-      message: 'Database temporarily disabled for testing'
-    },
-    environment: process.env.NODE_ENV || 'development'
+    database: useDatabase ? 'checking...' : 'test mode'
   });
 });
 
-// 3. РЕГИСТРАЦИЯ (тестовая)
+// РЕГИСТРАЦИЯ
 app.post('/api/register', (req, res) => {
-  console.log('📝 Registration attempt:', req.body);
+  console.log('📝 Registration:', req.body);
   
   res.json({
     success: true,
-    message: 'User registered (test mode - no database)',
+    message: 'User registered successfully',
     data: req.body,
-    userId: Date.now(), // временный ID
+    userId: Date.now(),
     timestamp: new Date().toISOString()
   });
 });
 
-// 4. ПОЛЬЗОВАТЕЛИ (тестовые данные)
+// ПОЛЬЗОВАТЕЛИ
 app.get('/api/users/:city', (req, res) => {
   const { city } = req.params;
   
-  const testUsers = [
+  const users = [
     {
       id: 1,
-      username: 'anna_' + city,
-      first_name: 'Анна',
-      age: 25,
+      username: 'user1_' + city,
+      first_name: 'Алексей',
+      age: 27,
       city: city,
-      gender: 'female',
-      bio: 'Люблю путешествия и книги'
+      gender: 'male',
+      bio: 'Инженер, люблю технологии'
     },
     {
       id: 2,
-      username: 'max_' + city,
-      first_name: 'Максим',
-      age: 28,
+      username: 'user2_' + city,
+      first_name: 'Мария',
+      age: 24,
       city: city,
-      gender: 'male',
-      bio: 'Занимаюсь спортом, учусь программировать'
+      gender: 'female',
+      bio: 'Дизайнер, увлекаюсь искусством'
     },
     {
       id: 3,
-      username: 'katya_' + city,
-      first_name: 'Екатерина',
-      age: 23,
+      username: 'user3_' + city,
+      first_name: 'Дмитрий',
+      age: 30,
       city: city,
-      gender: 'female',
-      bio: 'Фотограф, люблю природу и животных'
+      gender: 'male',
+      bio: 'Предприниматель, путешественник'
     }
   ];
   
   res.json({
     success: true,
     city: city,
-    count: testUsers.length,
-    users: testUsers,
-    note: 'Test data - database connection pending'
+    count: users.length,
+    users: users
   });
 });
 
-// 5. СВАЙП (тестовый)
+// СВАЙП
 app.post('/api/swipe', (req, res) => {
   const { swiperId, targetId, liked } = req.body;
   
-  const isMatch = liked && Math.random() > 0.7; // 30% шанс мэтча
+  const isMatch = liked && Math.random() > 0.7;
   
   res.json({
     success: true,
     isMatch: isMatch,
-    message: isMatch ? 'It\'s a match! 🎉' : 'Swipe recorded',
-    data: req.body,
-    timestamp: new Date().toISOString()
+    message: isMatch ? 'Мэтч! ❤️' : 'Свайп сохранен',
+    data: req.body
   });
 });
 
-// 6. 404 обработчик
+// 404
 app.use('*', (req, res) => {
   res.status(404).json({
-    error: 'Route not found',
+    error: 'Маршрут не найден',
     path: req.path,
     method: req.method,
-    availableEndpoints: [
-      'GET /',
-      'GET /api/health',
-      'POST /api/register',
-      'GET /api/users/:city',
-      'POST /api/swipe'
-    ],
-    timestamp: new Date().toISOString()
+    available: ['GET /', 'GET /api/health', 'POST /api/register', 'GET /api/users/:city', 'POST /api/swipe']
   });
 });
 
 // Экспорт для Vercel
 module.exports = app;
-
-// Локальный запуск
-if (require.main === module) {
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running: http://localhost:${PORT}`);
-  });
-}
