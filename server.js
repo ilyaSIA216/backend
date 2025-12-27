@@ -1,26 +1,33 @@
 require('dotenv').config();
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
-const http = require('http');
-const socketIo = require('socket.io');
-
-const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
-const matchRoutes = require('./routes/matches');
 
 const app = express();
-const server = http.createServer(app);
-const io = socketIo(server, { cors: { origin: "*" } });
-
 app.use(cors());
-app.use(express.json());
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/matches', matchRoutes);
+app.use(express.json({ limit: '50mb' }));
 
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error(err));
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'OK ✅', 
+    message: 'Telegram Dating Backend готов!', 
+    timestamp: new Date().toISOString(),
+    port: process.env.PORT || 3000
+  });
+});
 
-server.listen(3000, () => console.log('Server running on port 3000'));
+app.get('/health', (req, res) => res.json({ status: 'healthy' }));
+
+app.post('/api/test', (req, res) => {
+  res.json({ received: req.body, telegram: true });
+});
+
+// Telegram WebApp validation (для frontend)
+app.post('/api/validate', (req, res) => {
+  res.json({ valid: true, userId: req.body.user?.id || 'test' });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Dating Backend на http://localhost:${PORT}`);
+  console.log('✅ Готов к работе с Telegram Mini App!');
+});
